@@ -1,0 +1,36 @@
+name: build-and-smoke-test
+on:
+  push:
+    workflow_dispatch:
+
+    jobs:
+      build-run-test:
+          runs-on: ubuntu-latest
+              steps:
+                    - uses: actions/checkout@v4
+
+                          - name: Build image
+                                  run: docker build -t ytmcp:test .
+
+                                        - name: Run container
+                                                run: docker run -d --name ytmcp -p 8080:8080 ytmcp:test
+
+                                                      - name: Wait for startup
+                                                              run: sleep 10
+
+                                                                    - name: Startup logs
+                                                                            if: always()
+                                                                                    run: docker logs ytmcp || true
+
+                                                                                          - name: Smoke test GET root
+                                                                                                  run: curl -s -o /dev/null -w "root GET -> %{http_code}\n" http://localhost:8080/ || true
+
+                                                                                                        - name: Smoke test MCP initialize
+                                                                                                                run: |
+                                                                                                                          curl -s -X POST http://localhost:8080/ -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' | head -c 500
+                                                                                                                                    echo
+                                                                                                                                    
+                                                                                                                                          - name: Final logs
+                                                                                                                                                  if: always()
+                                                                                                                                                          run: docker logs ytmcp || true
+                                                                                                                                                          
